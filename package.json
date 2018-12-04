@@ -4,13 +4,20 @@
   "scripts": {
     "client": "cd client && npm start",
     "server": "node server.js",
-    "dev": "concurrently --kill-others-on-fail \"npm run server\" \"npm run client\""
+    "dev": "concurrently --kill-others-on-fail \"npm run server\" \"npm run client\"",
+    "test": "mocha --recursive"
   },
   "dependencies": {
     "express": "^4.16.2",
     "fatsecret": "^1.0.2"
   },
   "devDependencies": {
-    "concurrently": "^3.5.0"
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "concurrently": "^3.5.0",
+    "mocha": "^5.1.1",
+    "sinon": "^5.0.10",
+    "sinon-chai": "^3.1.0",
+    "supertest": "^3.0.0"
   }
 }

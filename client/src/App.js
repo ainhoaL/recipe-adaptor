@@ -1,44 +1,53 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
+import { IngredientList } from './components/IngredientList';
 
 class App extends Component {
-  state = {
-    response: ''
-  };
+  constructor(props) {
+    super(props);
+    this.state = {
+      ingredients: [],
+      servings: 1
+    }
 
-  componentDidMount() {
-    this.callApi()
-      .then(res => this.setState({ response: res.express }))
-      .catch(err => console.log(err));
+    this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  callApi = async () => {
-    const response = await fetch('/api/hello');
-    const body = await response.json();
+  handleSubmit(event) {
+    event.preventDefault();
+    const data = new FormData(event.target);
+    let servings = data.get('servings');
+    let ingredients = data.get('ingredients');
+    let bodydata = JSON.stringify({ servings, ingredients});
 
-    if (response.status !== 200) throw Error(body.message);
+    this.setState({ servings });
 
-    return body;
+    fetch('/api/calculatemacros', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: bodydata
+    })
+    .then(res => res.json())
+    .then(response => {
+      this.setState({ ingredients: response});
+    });
   }
 
   render() {
     return (
       <div>
         <div>
-          <form id="ingredientsform">
-            Servings: <input type="text" name="servings" id="servings" /><br />
+          <form id="ingredientsform" onSubmit={this.handleSubmit}>
+            Servings: <input type="text" name="servings" id="servings" value="1" /><br />
             Ingredients: <textarea name="ingredients" id="ingredients"></textarea><br />
             <input type="submit" value="Calculate Macros" />
             <span id="status-display"></span>
           </form>
         </div>
         <div>
-          Per serving: <br />
-          Calories: <input type="text" name="calories" id="calories" /><br />
-          Protein: <input type="text" name="protein" id="protein" /><br />
-          Fat: <input type="text" name="fat" id="fat" /><br />
-          Carbs: <input type="text" name="carbs" id="carbs" /><br />
+          <IngredientList data={this.state.ingredients} servings={this.state.servings} />
         </div>
       </div>
     );
