@@ -4,7 +4,7 @@ export class Ingredient extends Component {
     constructor(props) {
         super(props);
 
-        this.state = {selectedOption: 0, selectedServing: 0, qty: this.props.data.quantity, calories: 0, carbohydrate: 0, fat: 0, protein: 0 };
+        this.state = {selectedOption: 0, selectedServing: 0, qty: parseFloat(this.props.data.quantity), calories: 0, carbohydrate: 0, fat: 0, protein: 0 };
 
         this.handleIngredientChange = this.handleIngredientChange.bind(this);
         this.handleServingChange = this.handleServingChange.bind(this);
@@ -15,9 +15,10 @@ export class Ingredient extends Component {
 
     handleIngredientChange(event) {
         let selectedOption = event.target.value;
-        this.setState({selectedOption});
+        let selectedServing = 0;
+        this.setState({selectedOption, selectedServing});
 
-        this.calculateMacros(selectedOption, this.state.selectedServing, this.state.qty);
+        this.calculateMacros(selectedOption, selectedServing, this.state.qty);
     }
 
     handleServingChange(event) {
@@ -28,23 +29,26 @@ export class Ingredient extends Component {
     }
 
     handleQtyChange(event) {
-        let qty = event.target.value;
+        let qty = parseFloat(event.target.value);
         this.setState({qty});
 
         this.calculateMacros(this.state.selectedOption, this.state.selectedServing, qty);
     }
 
     calculateMacros(selectedOption, selectedServing, qty) {
+
         let ingredientInfo = this.props.data.results[selectedOption].servings[selectedServing];
-        // let servingQty = qty / ingredientInfo.number_of_units;
-        let calories = ingredientInfo.calories * qty;
-        let protein = ingredientInfo.protein * qty;
-        let carb = ingredientInfo.carbohydrate * qty;
-        let fat = ingredientInfo.fat * qty;
 
-        this.setState({calories, carb, fat, protein});
+        if (ingredientInfo) {
+            let calories = ingredientInfo.calories;
+            let protein = ingredientInfo.protein;
+            let carb = ingredientInfo.carbohydrate;
+            let fat = ingredientInfo.fat;
 
-        this.props.recalculate({name: this.props.data.name, macros: {calories, protein, carb, fat}});
+            this.setState({calories, carb, fat, protein});
+            
+            this.props.recalculate({name: this.props.data.name, macros: {calories, protein, carb, fat}, selectedOption, selectedServing, qty });
+        }
     }
 
     render() {
@@ -61,7 +65,7 @@ export class Ingredient extends Component {
                 <select onChange={this.handleServingChange}>
                     {servingOptions}
                 </select>
-                <input type="text" name="qty" value={this.state.qty} onChange={this.handleQtyChange} />
+                <input type="number" name="qty" value={this.state.qty} onChange={this.handleQtyChange} />
                 {this.state.calories} {this.state.protein} {this.state.carb} {this.state.fat}
             </div>
         );   

@@ -413,7 +413,7 @@ describe('Ingredients Controller', () => {
           fakeAPI.method.resolves(apiResults);
           return expect(ingredientsController.getIngredientsFromFatAPI('test ingredient')).to.not.be.rejected.then((results) => {
             expect(fakeAPI.method.callCount).to.equal(1);
-            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 10});
+            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 15 });
             expect(results.length).to.equal(5);
             expect(results).to.deep.equal(expectedResults);
           });
@@ -449,7 +449,7 @@ describe('Ingredients Controller', () => {
           fakeAPI.method.resolves(apiResults);
           return expect(ingredientsController.getIngredientsFromFatAPI('test ingredient')).to.not.be.rejected.then((results) => {
             expect(fakeAPI.method.callCount).to.equal(1);
-            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 10});
+            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 15});
             expect(results.length).to.equal(4);
             expect(results).to.deep.equal(expectedResults);
           });
@@ -476,7 +476,7 @@ describe('Ingredients Controller', () => {
           fakeAPI.method.resolves(apiResults);
           return expect(ingredientsController.getIngredientsFromFatAPI('test ingredient')).to.not.be.rejected.then((results) => {
             expect(fakeAPI.method.callCount).to.equal(1);
-            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 10});
+            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 15 });
             expect(results.length).to.equal(2);
             expect(results).to.deep.equal(expectedResults);
           });
@@ -488,7 +488,7 @@ describe('Ingredients Controller', () => {
           fakeAPI.method.resolves({});
           return expect(ingredientsController.getIngredientsFromFatAPI('test ingredient')).to.not.be.rejected.then((results) => {
             expect(fakeAPI.method.callCount).to.equal(1);
-            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 10});
+            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 15});
             expect(results.length).to.equal(0);
             expect(results).to.deep.equal([]);
           });
@@ -506,7 +506,7 @@ describe('Ingredients Controller', () => {
           fakeAPI.method.resolves(apiResults);
           return expect(ingredientsController.getIngredientsFromFatAPI('test ingredient')).to.not.be.rejected.then((results) => {
             expect(fakeAPI.method.callCount).to.equal(1);
-            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 10});
+            expect(fakeAPI.method).to.have.been.calledWith('foods.search', { search_expression: 'test ingredient', max_results: 15 });
             expect(results.length).to.equal(0);
             expect(results).to.deep.equal([]);
           });
@@ -783,6 +783,182 @@ describe('Ingredients Controller', () => {
             expect(ingredients[1].results[1].servings).to.deep.equal(saltResults);              
           });
       });
+    });
+  });
+
+  describe('recalculateRecipe', () => {
+    let ingredientsInfo;
+    let servings = 1;
+
+    beforeEach(() => {
+      ingredientsInfo = {
+        'chicken': {
+          macros: { calories: 191, protein: 28.96, carb: 0, fat: 7.57 },
+          qty: 2
+        },
+        'chickpeas': {
+          macros: { calories: 180, protein: 9.54, carb: 29.98, fat: 2.99 },
+          qty: 0.2
+        }
+      }
+    });
+
+    context('when the change is not possible', () => {
+      describe('calories have changed but macros have not', () => {
+        let recipe;
+        beforeEach(() => {
+          recipe = {
+            ingredientsInfo,
+            servings,
+            wantedMacros: { calories: 200, protein: 59.83, carb: 6, fat: 15.74 }
+          }
+        });
+        it('returns a rejected promise', () => {
+          return expect(ingredientsController.recalculateRecipe(recipe)).to.be.rejectedWith('Impossible to change overall calories without changing macros');
+        });
+      });
+    });
+
+    context('when calories and macros have been changed', () => {
+      describe('calories and macros have been reduced in the same ratio (+- 10%)', () => {
+        let recipe;
+        beforeEach(() => {
+          recipe = {
+            ingredientsInfo,
+            servings,
+            wantedMacros: { calories: 335, protein: 48, carb: 5, fat: 12 }
+          }
+        });
+        it('returns correct new recipe quantities', () => {
+          let expectedMacros = { calories: 334.4, protein: 47.86, carb: 4.8, fat: 12.59 }
+          let expectedIngredients = { 
+            'chicken': {macros: { calories: 191, protein: 28.96, carb: 0, fat: 7.57 }, qty: 1.6 },
+            'chickpeas': { macros: { calories: 180, protein: 9.54, carb: 29.98, fat: 2.99 }, qty: 0.16 }
+          };
+          return expect(ingredientsController.recalculateRecipe(recipe)).to.not.be.rejected.then((response) => {
+            expect(response.macros).to.deep.equal(expectedMacros);
+            expect(response.ingredientsInfo).to.deep.equal(expectedIngredients);
+          });
+        });
+      });
+
+      describe('calories and macros have been increased in the same ratio (+- 10%)', () => {
+        let recipe;
+        beforeEach(() => {
+          recipe = {
+            ingredientsInfo,
+            servings,
+            wantedMacros: { calories: 627, protein: 90, carb: 9, fat: 23 }
+          }
+        });
+        it('returns correct new recipe quantities', () => {
+          let expectedMacros = { calories: 627, protein: 89.74, carb: 8.99, fat: 23.61 }
+          let expectedIngredients = { 
+            'chicken': {macros: { calories: 191, protein: 28.96, carb: 0, fat: 7.57 }, qty: 3 },
+            'chickpeas': { macros: { calories: 180, protein: 9.54, carb: 29.98, fat: 2.99 }, qty: 0.3 }
+          };
+          return expect(ingredientsController.recalculateRecipe(recipe)).to.not.be.rejected.then((response) => {
+            expect(response.macros).to.deep.equal(expectedMacros);
+            expect(response.ingredientsInfo).to.deep.equal(expectedIngredients);
+          });
+        });
+      });
+
+      describe('calories and macros have changed in different ratios', () => {
+        let recipe;
+        beforeEach(() => {
+          recipe = {
+            ingredientsInfo,
+            servings,
+            wantedMacros: { calories: 600, protein: 80, carb: 12, fat: 10 }
+          }
+        });
+        it('returns correct new recipe quantities', () => {
+          let expectedMacros = { calories: 602.28, protein: 86.17, carb: 8.69, fat: 22.67 }
+          let expectedIngredients = { 
+            'chicken': {macros: { calories: 191, protein: 28.96, carb: 0, fat: 7.57 }, qty: 2.88 },
+            'chickpeas': { macros: { calories: 180, protein: 9.54, carb: 29.98, fat: 2.99 }, qty: 0.29 }
+          };
+          return expect(ingredientsController.recalculateRecipe(recipe)).to.not.be.rejected.then((response) => {
+            expect(response.macros).to.deep.equal(expectedMacros);
+            expect(response.ingredientsInfo).to.deep.equal(expectedIngredients);
+          });
+        });
+      });
+    });
+
+    context('when only one metric has changed', () => {
+      describe('only calories have ben changed', () => {
+        let recipe;
+        beforeEach(() => {
+          recipe = {
+            ingredientsInfo,
+            servings,
+            wantedMacros: { calories: 500 }
+          }
+        });
+
+        it('returns correct new recipe quantities', () => {
+          let expectedMacros = { calories: 501.60, protein: 71.79, carb: 7.20, fat: 18.89 }
+          let expectedIngredients = { 
+            'chicken': {macros: { calories: 191, protein: 28.96, carb: 0, fat: 7.57 }, qty: 2.4 },
+            'chickpeas': { macros: { calories: 180, protein: 9.54, carb: 29.98, fat: 2.99 }, qty: 0.24 }
+          };
+          return expect(ingredientsController.recalculateRecipe(recipe)).to.not.be.rejected.then((response) => {
+            expect(response.macros).to.deep.equal(expectedMacros);
+            expect(response.ingredientsInfo).to.deep.equal(expectedIngredients);
+          });
+        });
+      });
+
+      describe('only protein has ben changed', () => {
+        let recipe;
+        beforeEach(() => {
+          recipe = {
+            ingredientsInfo,
+            servings,
+            wantedMacros: { protein: 70 }
+          }
+        });
+        it('returns correct new recipe quantities', () => {
+          let expectedMacros = { calories: 488.34, protein: 69.96, carb: 6.9, fat: 18.4 }
+          let expectedIngredients = { 
+            'chicken': {macros: { calories: 191, protein: 28.96, carb: 0, fat: 7.57 }, qty: 2.34 },
+            'chickpeas': { macros: { calories: 180, protein: 9.54, carb: 29.98, fat: 2.99 }, qty: 0.23 }
+          };
+          return expect(ingredientsController.recalculateRecipe(recipe)).to.not.be.rejected.then((response) => {
+            expect(response.macros).to.deep.equal(expectedMacros);
+            expect(response.ingredientsInfo).to.deep.equal(expectedIngredients);
+          });
+        });
+      });
+    });
+  });
+
+  describe('calculateMacrosPerServing', () => {
+    let ingredientsInfo = {
+        'chicken': {
+          macros: { calories: 191, protein: 28.96, carb: 0, fat: 7.57 },
+          qty: 2
+        },
+        'chickpeas': {
+          macros: { calories: 180, protein: 9.54, carb: 29.98, fat: 2.99 },
+          qty: 0.2
+        },
+        'broccoli': {
+          macros: { calories: 50, protein: 2, carb: 10, fat: 3 },
+          qty: 1.5
+        }
+      };
+    
+    it('returns correct macros for 1 serving', () => {
+      let macros = ingredientsController.calculateMacrosPerServing(ingredientsInfo, 1);
+      expect(macros).to.deep.equal({calories: 493, protein: 62.83, carb: 21, fat: 20.24});
+    });
+
+    it('returns correct macros for 2 servings', () => {
+      let macros = ingredientsController.calculateMacrosPerServing(ingredientsInfo, 2);
+      expect(macros).to.deep.equal({calories: 246.5, protein: 31.41, carb: 10.5, fat: 10.12});
     });
   });
 });
