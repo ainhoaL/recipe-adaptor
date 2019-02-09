@@ -1,4 +1,4 @@
-const fatAPILibrary = new (require('fatsecret'))(KEY, SECRET);
+const fatAPILibrary = new (require('fatsecret'))('KEY', 'SECRET');
 
 module.exports = {
 
